@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
+from app.modules.organizations.models import Organization, OrganizationMember  # noqa: E402,F401
 from app.modules.users.models import User  # noqa: E402,F401  (import registers the table with Base)
 
 # this is the Alembic Config object, which provides
