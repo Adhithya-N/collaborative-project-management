@@ -1,0 +1,29 @@
+# Web framework: handles HTTP routing, request validation, docs generation
+fastapi==0.115.0
+
+# ASGI server: actually runs the FastAPI app and listens for HTTP requests
+uvicorn[standard]==0.30.6
+
+# ORM: lets us work with Postgres tables as Python classes instead of raw SQL
+sqlalchemy==2.0.35
+
+# Driver: the actual library SQLAlchemy uses to talk to Postgres
+psycopg[binary]==3.2.3
+
+# Migrations: tracks and applies database schema changes over time
+alembic==1.13.3
+
+# Loads settings (DB URL, JWT secret, etc.) from a .env file into typed Python objects
+pydantic-settings==2.5.2
+
+# Validates email format for the EmailStr type used in request schemas
+email-validator==2.2.0
+
+# Password hashing: never store plain-text passwords
+passlib[bcrypt]==1.7.4
+
+# Pinned explicitly: passlib 1.7.4's bcrypt self-test is broken on bcrypt>=4.1
+bcrypt==4.0.1
+
+# JWT: creates/verifies the login tokens used for authentication
+python-jose[cryptography]==3.3.0

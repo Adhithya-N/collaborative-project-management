@@ -1,0 +1,19 @@
+# --- Python (backend) ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# --- Environment secrets (never commit real values) ---
+.env
+.env.local
+
+# --- Node / Next.js (frontend, added in a later phase) ---
+node_modules/
+.next/
+out/
+
+# --- Editor / OS ---
+.vscode/
+.DS_Store
