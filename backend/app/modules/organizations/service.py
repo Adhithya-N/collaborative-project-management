@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.modules.organizations.models import Organization, OrganizationMember, OrgRole
-from app.modules.organizations.schemas import MemberInvite, OrganizationCreate
+from app.modules.organizations.schemas import MemberInvite, MemberRoleUpdate, OrganizationCreate
 from app.modules.users.models import User
 
 
@@ -76,3 +76,19 @@ def remove_member(db: Session, org_id: uuid.UUID, user_id: uuid.UUID) -> None:
 
     db.delete(membership)
     db.commit()
+
+
+def update_member_role(db: Session, org_id: uuid.UUID, user_id: uuid.UUID, data: MemberRoleUpdate) -> OrganizationMember:
+    """Promotes or demotes an existing member to a different role."""
+    membership = db.execute(
+        select(OrganizationMember).where(
+            OrganizationMember.org_id == org_id, OrganizationMember.user_id == user_id
+        )
+    ).scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership not found")
+
+    membership.role = data.role
+    db.commit()
+    db.refresh(membership)
+    return membership

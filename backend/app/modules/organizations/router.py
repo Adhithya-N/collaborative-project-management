@@ -9,13 +9,14 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.modules.organizations.dependencies import require_role
 from app.modules.organizations.models import OrgRole
-from app.modules.organizations.schemas import MemberInvite, MemberRead, OrganizationCreate, OrganizationRead
+from app.modules.organizations.schemas import MemberInvite, MemberRead, MemberRoleUpdate, OrganizationCreate, OrganizationRead
 from app.modules.organizations.service import (
     add_member,
     create_organization,
     list_members,
     list_my_organizations,
     remove_member,
+    update_member_role,
 )
 from app.modules.users.models import User
 
@@ -70,3 +71,15 @@ def delete_member(
     _membership: object = Depends(require_role(OrgRole.ADMIN)),
 ) -> None:
     remove_member(db, org_id, user_id)
+
+
+@router.patch("/{org_id}/members/{user_id}", response_model=MemberRead)
+def change_member_role(
+    org_id: uuid.UUID,
+    user_id: uuid.UUID,
+    data: MemberRoleUpdate,
+    db: Session = Depends(get_db),
+    _membership: object = Depends(require_role(OrgRole.ADMIN)),
+) -> MemberRead:
+    membership = update_member_role(db, org_id, user_id, data)
+    return MemberRead.model_validate(membership)
