@@ -12,6 +12,7 @@ from app.modules.projects.models import ProjectMember
 from app.modules.tasks.models import Task, TaskStatus
 from app.modules.tasks.schemas import TaskCreate, TaskUpdate
 from app.modules.users.models import User
+from app.realtime.event_bus import publish
 
 
 def _validate_assignee(db: Session, project_id: uuid.UUID, assignee_id: uuid.UUID | None) -> None:
@@ -58,6 +59,13 @@ def create_task(db: Session, project_id: uuid.UUID, data: TaskCreate, current_us
 
     db.commit()
     db.refresh(task)
+
+    # Broadcast AFTER commit - never push state to clients that could still roll back.
+    publish(
+        task.project_id,
+        "task.created",
+        {"task_id": str(task.id), "title": task.title, "status": task.status.value},
+    )
     return task
 
 
@@ -110,6 +118,12 @@ def update_task(db: Session, task: Task, data: TaskUpdate, current_user: User) -
 
     db.commit()
     db.refresh(task)
+
+    publish(
+        task.project_id,
+        "task.updated",
+        {"task_id": str(task.id), "status": task.status.value, "assignee_id": str(task.assignee_id) if task.assignee_id else None},
+    )
     return task
 
 

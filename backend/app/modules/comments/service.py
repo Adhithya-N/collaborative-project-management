@@ -15,6 +15,7 @@ from app.modules.comments.schemas import CommentCreate, CommentUpdate
 from app.modules.notifications.service import create_notification
 from app.modules.tasks.models import Task
 from app.modules.users.models import User
+from app.realtime.event_bus import publish
 
 
 def create_comment(db: Session, task_id: uuid.UUID, data: CommentCreate, current_user: User) -> Comment:
@@ -42,6 +43,14 @@ def create_comment(db: Session, task_id: uuid.UUID, data: CommentCreate, current
 
     db.commit()
     db.refresh(comment)
+
+    if task is not None:
+        publish(
+            task.project_id,
+            "comment.created",
+            {"task_id": str(task_id), "comment_id": str(comment.id), "author_id": str(current_user.id)},
+        )
+
     return comment
 
 
