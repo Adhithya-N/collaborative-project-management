@@ -12,6 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
+from app.modules.activity.models import ActivityLog  # noqa: E402,F401
+from app.modules.comments.models import Comment  # noqa: E402,F401
 from app.modules.organizations.models import Organization, OrganizationMember  # noqa: E402,F401
 from app.modules.projects.models import Project, ProjectMember  # noqa: E402,F401
 from app.modules.tasks.models import Task  # noqa: E402,F401

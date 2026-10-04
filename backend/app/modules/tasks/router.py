@@ -56,9 +56,10 @@ def get_task_route(
 def update_task_route(
     data: TaskUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     task: Task = Depends(require_task_project_role(ProjectRole.CONTRIBUTOR)),
 ) -> TaskRead:
-    updated = update_task(db, task, data)
+    updated = update_task(db, task, data, current_user)
     return TaskRead.model_validate(updated)
 
 

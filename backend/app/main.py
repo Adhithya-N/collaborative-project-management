@@ -5,7 +5,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.modules.activity.router import router as activity_router
 from app.modules.auth.router import router as auth_router
+from app.modules.comments.router import comments_router, task_comments_router
 from app.modules.organizations.router import router as organizations_router
 from app.modules.projects.router import org_projects_router, projects_router
 from app.modules.tasks.router import project_tasks_router, tasks_router
@@ -21,6 +23,9 @@ app.include_router(org_projects_router)
 app.include_router(projects_router)
 app.include_router(project_tasks_router)
 app.include_router(tasks_router)
+app.include_router(task_comments_router)
+app.include_router(comments_router)
+app.include_router(activity_router)
 
 
 @app.get("/health")

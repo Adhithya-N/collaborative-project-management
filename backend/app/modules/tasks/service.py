@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.modules.activity.service import record_activity
 from app.modules.projects.models import ProjectMember
 from app.modules.tasks.models import Task, TaskStatus
 from app.modules.tasks.schemas import TaskCreate, TaskUpdate
@@ -28,7 +29,7 @@ def _validate_assignee(db: Session, project_id: uuid.UUID, assignee_id: uuid.UUI
 
 
 def create_task(db: Session, project_id: uuid.UUID, data: TaskCreate, current_user: User) -> Task:
-    """Creates a task within a project."""
+    """Creates a task within a project and records the creation in its activity log."""
     _validate_assignee(db, project_id, data.assignee_id)
 
     task = Task(
@@ -42,6 +43,10 @@ def create_task(db: Session, project_id: uuid.UUID, data: TaskCreate, current_us
         due_date=data.due_date,
     )
     db.add(task)
+    db.flush()  # assigns task.id, still part of the same transaction as the activity log entry
+
+    record_activity(db, task_id=task.id, actor_id=current_user.id, action="created", metadata={"title": task.title})
+
     db.commit()
     db.refresh(task)
     return task
@@ -55,15 +60,36 @@ def list_tasks(db: Session, project_id: uuid.UUID, status_filter: TaskStatus | N
     return list(db.execute(query).scalars())
 
 
-def update_task(db: Session, task: Task, data: TaskUpdate) -> Task:
-    """Applies only the fields the client actually sent - a true partial update."""
+def update_task(db: Session, task: Task, data: TaskUpdate, current_user: User) -> Task:
+    """Applies only the fields the client actually sent, logging status/assignment changes as activity."""
     updates = data.model_dump(exclude_unset=True)
 
     if "assignee_id" in updates:
         _validate_assignee(db, task.project_id, updates["assignee_id"])
 
+    old_status = task.status
+    old_assignee_id = task.assignee_id
+
     for field, value in updates.items():
         setattr(task, field, value)
+
+    if "status" in updates and task.status != old_status:
+        record_activity(
+            db,
+            task_id=task.id,
+            actor_id=current_user.id,
+            action="status_changed",
+            metadata={"from": old_status.value, "to": task.status.value},
+        )
+
+    if "assignee_id" in updates and task.assignee_id != old_assignee_id:
+        record_activity(
+            db,
+            task_id=task.id,
+            actor_id=current_user.id,
+            action="assigned",
+            metadata={"assignee_id": str(task.assignee_id) if task.assignee_id else None},
+        )
 
     db.commit()
     db.refresh(task)
