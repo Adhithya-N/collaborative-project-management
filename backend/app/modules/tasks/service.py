@@ -1,0 +1,76 @@
+"""Business logic for tasks."""
+
+import uuid
+
+from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.modules.projects.models import ProjectMember
+from app.modules.tasks.models import Task, TaskStatus
+from app.modules.tasks.schemas import TaskCreate, TaskUpdate
+from app.modules.users.models import User
+
+
+def _validate_assignee(db: Session, project_id: uuid.UUID, assignee_id: uuid.UUID | None) -> None:
+    """An assignee must already be a member of the task's project (same rule as project membership itself)."""
+    if assignee_id is None:
+        return
+    membership = db.execute(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project_id, ProjectMember.user_id == assignee_id
+        )
+    ).scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Assignee must be a member of this project"
+        )
+
+
+def create_task(db: Session, project_id: uuid.UUID, data: TaskCreate, current_user: User) -> Task:
+    """Creates a task within a project."""
+    _validate_assignee(db, project_id, data.assignee_id)
+
+    task = Task(
+        project_id=project_id,
+        title=data.title,
+        description=data.description,
+        status=data.status,
+        priority=data.priority,
+        assignee_id=data.assignee_id,
+        created_by=current_user.id,
+        due_date=data.due_date,
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def list_tasks(db: Session, project_id: uuid.UUID, status_filter: TaskStatus | None = None) -> list[Task]:
+    """Returns tasks in a project, optionally filtered by status - the task board's main query."""
+    query = select(Task).where(Task.project_id == project_id)
+    if status_filter is not None:
+        query = query.where(Task.status == status_filter)
+    return list(db.execute(query).scalars())
+
+
+def update_task(db: Session, task: Task, data: TaskUpdate) -> Task:
+    """Applies only the fields the client actually sent - a true partial update."""
+    updates = data.model_dump(exclude_unset=True)
+
+    if "assignee_id" in updates:
+        _validate_assignee(db, task.project_id, updates["assignee_id"])
+
+    for field, value in updates.items():
+        setattr(task, field, value)
+
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def delete_task(db: Session, task: Task) -> None:
+    """Permanently removes a task."""
+    db.delete(task)
+    db.commit()

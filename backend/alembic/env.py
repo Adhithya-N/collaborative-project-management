@@ -14,6 +14,7 @@ from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
 from app.modules.organizations.models import Organization, OrganizationMember  # noqa: E402,F401
 from app.modules.projects.models import Project, ProjectMember  # noqa: E402,F401
+from app.modules.tasks.models import Task  # noqa: E402,F401
 from app.modules.users.models import User  # noqa: E402,F401  (import registers the table with Base)
 
 # this is the Alembic Config object, which provides
