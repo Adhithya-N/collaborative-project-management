@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.modules.activity.service import record_activity
+from app.modules.notifications.service import create_notification
 from app.modules.projects.models import ProjectMember
 from app.modules.tasks.models import Task, TaskStatus
 from app.modules.tasks.schemas import TaskCreate, TaskUpdate
@@ -46,6 +47,14 @@ def create_task(db: Session, project_id: uuid.UUID, data: TaskCreate, current_us
     db.flush()  # assigns task.id, still part of the same transaction as the activity log entry
 
     record_activity(db, task_id=task.id, actor_id=current_user.id, action="created", metadata={"title": task.title})
+
+    if task.assignee_id is not None and task.assignee_id != current_user.id:
+        create_notification(
+            db,
+            user_id=task.assignee_id,
+            type_="task_assigned",
+            payload={"task_id": str(task.id), "task_title": task.title},
+        )
 
     db.commit()
     db.refresh(task)
@@ -90,6 +99,14 @@ def update_task(db: Session, task: Task, data: TaskUpdate, current_user: User) -
             action="assigned",
             metadata={"assignee_id": str(task.assignee_id) if task.assignee_id else None},
         )
+
+        if task.assignee_id is not None and task.assignee_id != current_user.id:
+            create_notification(
+                db,
+                user_id=task.assignee_id,
+                type_="task_assigned",
+                payload={"task_id": str(task.id), "task_title": task.title},
+            )
 
     db.commit()
     db.refresh(task)

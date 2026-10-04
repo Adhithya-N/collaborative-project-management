@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.modules.activity.service import record_activity
 from app.modules.comments.models import Comment
 from app.modules.comments.schemas import CommentCreate, CommentUpdate
+from app.modules.notifications.service import create_notification
+from app.modules.tasks.models import Task
 from app.modules.users.models import User
 
 
@@ -28,6 +30,15 @@ def create_comment(db: Session, task_id: uuid.UUID, data: CommentCreate, current
         action="commented",
         metadata={"comment_id": str(comment.id)},
     )
+
+    task = db.get(Task, task_id)
+    if task is not None and task.assignee_id is not None and task.assignee_id != current_user.id:
+        create_notification(
+            db,
+            user_id=task.assignee_id,
+            type_="new_comment",
+            payload={"task_id": str(task_id), "comment_id": str(comment.id)},
+        )
 
     db.commit()
     db.refresh(comment)
